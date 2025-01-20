@@ -10,18 +10,31 @@
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
 
-- name: "Start attack"
-  shell: "/home/cybears/ddos_scripts/attack.sh"
+- name: "Ensure script execution rights"
+  file:
+    path: "/home/cybears/ddos_scripts/attack.sh"
+    mode: '0755'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ attacker_hosts }}"
+
+- name: "Execute attack script"
+  shell: |
+    cd /home/cybears/ddos_scripts
+    ./attack.sh 2>&1 | tee attack.log
   async: 1800  # 30 minute maximum per attack
   poll: 10
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
   register: attack_result
+  become: true
+  become_user: cybears
 
-- name: "Log attack initiation"
+- name: "Log attack execution"
   lineinfile:
-    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
-    line: "Attack started on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Attack executed on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
     insertafter: EOF
   with_items: "{{ attack_result.results }}"
   become: true

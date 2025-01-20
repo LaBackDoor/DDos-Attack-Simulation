@@ -1,21 +1,21 @@
 # tasks/cleanup_tasks.yml
 ---
 - name: "Stop all normal traffic scripts"
-  shell: "pkill -f normal.sh"
+  shell: "pkill -f normal.sh || true"
   delegate_to: "{{ item }}"
   ignore_errors: yes
   with_items: "{{ normal_hosts }}"
   become: true
 
 - name: "Stop any running attack scripts"
-  shell: "pkill -f attack.sh"
+  shell: "pkill -f attack.sh || true"
   delegate_to: "{{ item }}"
   ignore_errors: yes
   with_items: "{{ attacker_hosts }}"
   become: true
 
 - name: "Stop tcpdump on monitor"
-  shell: "pkill tcpdump"
+  shell: "pkill tcpdump || true"
   delegate_to: "{{ groups['monitor'][0] }}"
   ignore_errors: yes
   become: true
@@ -24,24 +24,25 @@
   wait_for:
     timeout: 10
 
-- name: "Get PCAP file size"
+- name: "Get PCAP information"
   stat:
     path: "/var/log/pcap/{{ pcap_filename }}"
   delegate_to: "{{ groups['monitor'][0] }}"
-  register: pcap_file
+  register: pcap_info
   become: true
 
 - name: "Record cycle completion"
   lineinfile:
-    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
     line: |
       
       =====================================
       Cycle Complete
       =====================================
       PCAP File: {{ pcap_filename }}
-      Size: {{ (pcap_file.stat.size / 1024 / 1024) | round(2) }} MB
+      Size: {{ (pcap_info.stat.size | default(0) / 1024 / 1024) | round(2) }} MB
       End Time: {{ '%Y-%m-%d %H:%M:%S' | strftime }}
       =====================================
     insertafter: EOF
   become: true
+  when: pcap_info.stat is defined and pcap_info.stat.exists
