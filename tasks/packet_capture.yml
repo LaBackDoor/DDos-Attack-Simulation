@@ -1,10 +1,12 @@
 # tasks/packet_capture.yml
 ---
-- name: "Ensure PCAP directory exists"
+- name: "Ensure PCAP directory exists with proper permissions"
   file:
     path: "/var/log/pcap"
     state: directory
     mode: '0755'
+    owner: root
+    group: root
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
 
@@ -32,6 +34,6 @@
 - name: "Record capture start"
   lineinfile:
     path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
-    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }}"
+    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }} (Job ID: {{ tcpdump_job.ansible_job_id }})"
     insertafter: EOF
   become: true
