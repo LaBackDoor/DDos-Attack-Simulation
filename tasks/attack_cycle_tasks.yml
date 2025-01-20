@@ -37,18 +37,6 @@
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
 
-- name: "Execute attack script with duration"
-  shell: |
-    cd /home/cybears/ddos_scripts
-    ./attack.sh {{ attack_duration }} 2>&1 | tee attack.log
-  async: "{{ attack_duration + 300 }}"
-  poll: 30
-  delegate_to: "{{ item }}"
-  with_items: "{{ attacker_hosts }}"
-  register: attack_result
-  become: true
-  become_user: cybears
-
 - name: "Log attack execution"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
@@ -57,9 +45,17 @@
   with_items: "{{ attack_result.results }}"
   become: true
 
-- name: "Wait for attack duration"
-  wait_for:
-    timeout: "{{ attack_duration }}"
+- name: "Execute attack script with duration"
+  shell: |
+    cd /home/cybears/ddos_scripts
+    ./attack.sh {{ attack_duration }} 2>&1 | tee attack.log
+  async: "{{ attack_duration + 300 }}"
+  poll: -1
+  delegate_to: "{{ item }}"
+  with_items: "{{ attacker_hosts }}"
+  register: attack_result
+  become: true
+  become_user: cybears
 
 - name: "Log attack cycle completion"
   lineinfile:
