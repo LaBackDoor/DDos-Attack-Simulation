@@ -1,0 +1,78 @@
+---
+- name: "Continuous DDoS Simulation with Random Intervals"
+  hosts: localhost
+  gather_facts: true
+  vars:
+    intensity: "{{ intensity | default('low') }}"
+    scripts_dir: "{{ scripts_dir }}"
+    sim_duration: 86400
+    log_dir: "/var/log/ddos_sim"
+    simulation_start: "{{ ansible_date_time.epoch }}"
+
+  pre_tasks:
+    - name: "Set simulation variables"
+      set_fact:
+        next_attack_delay: "{{ 3600 if intensity == 'low' else (2400 if intensity == 'mid' else 1200) }}"
+        cycle_timestamp: "{{ '%Y%m%d_%H%M%S' | strftime }}"
+
+    - name: "Create log directory if it doesn't exist"
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+        mode: '0755'
+      become: true
+
+    - name: "Create simulation master log"
+      copy:
+        content: |
+          =====================================
+          Continuous DDoS Simulation Start
+          =====================================
+          Start Time: {{ ansible_date_time.iso8601 }}
+          Intensity Level: {{ intensity }}
+          Scripts Directory: {{ scripts_dir }}
+          Maximum Duration: {{ sim_duration }} seconds
+          Attack Interval: {{ next_attack_delay }} seconds
+          =====================================
+        dest: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+        mode: '0644'
+      become: true
+
+  tasks:
+    - name: "Transfer routes file to all clients"
+      include_tasks: tasks/transfer_routes.yml
+
+    - name: "Run simulation loop"
+      block:
+        - name: "Check simulation duration"
+          set_fact:
+            current_time: "{{ lookup('pipe', 'date +%s') }}"
+            should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < sim_duration|int }}"
+
+        - name: "Execute attack cycle"
+          include_tasks: tasks/role_assignment.yml
+
+        - name: "Start packet capture"
+          include_tasks: tasks/packet_capture.yml
+
+        - name: "Configure and start normal traffic"
+          include_tasks: tasks/normal_traffic.yml
+
+        - name: "Execute attack phase"
+          include_tasks: tasks/attack_cycle_tasks.yml
+
+        - name: "Cleanup cycle"
+          include_tasks: tasks/cleanup_tasks.yml
+
+        - name: "Wait for next attack window"
+          wait_for:
+            timeout: "{{ next_attack_delay }}"
+          when: should_continue
+
+        - name: "Continue simulation"
+          include_tasks: tasks/simulation_loop.yml
+          when: should_continue
+
+      rescue:
+        - name: "Handle simulation interruption"
+          include_tasks: tasks/cleanup_tasks.yml

@@ -1,0 +1,41 @@
+# tasks/normal_traffic.yml
+---
+- name: "Set script and log paths"
+  set_fact:
+    local_script_path: "{{ scripts_dir }}/normal.sh"
+    remote_script_path: "/home/cybears/ddos_scripts/normal.sh"
+  run_once: true
+
+- name: "Verify script exists locally"
+  stat:
+    path: "{{ local_script_path }}"
+  register: script_check
+  delegate_to: localhost
+  run_once: true
+  failed_when: not script_check.stat.exists
+  
+- name: "Copy normal traffic script to hosts"
+  copy:
+    src: "{{ local_script_path }}"
+    dest: "{{ remote_script_path }}"
+    mode: '0755'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+
+- name: "Start normal traffic script"
+  shell: "cd /home/cybears/ddos_scripts && nohup ./normal.sh > normal.log 2>&1 & echo $!"
+  args:
+    chdir: "/home/cybears/ddos_scripts"
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  register: normal_pid
+
+- name: "Record normal traffic start"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Normal traffic started on {{ item.item }} (PID: {{ item.stdout }}) at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    insertafter: EOF
+  with_items: "{{ normal_pid.results }}"
+  become: true

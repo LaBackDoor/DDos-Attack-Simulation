@@ -1,0 +1,47 @@
+# tasks/cleanup_tasks.yml
+---
+- name: "Stop all normal traffic scripts"
+  shell: "pkill -f normal.sh"
+  delegate_to: "{{ item }}"
+  ignore_errors: yes
+  with_items: "{{ normal_hosts }}"
+  become: true
+
+- name: "Stop any running attack scripts"
+  shell: "pkill -f attack.sh"
+  delegate_to: "{{ item }}"
+  ignore_errors: yes
+  with_items: "{{ attacker_hosts }}"
+  become: true
+
+- name: "Stop tcpdump on monitor"
+  shell: "pkill tcpdump"
+  delegate_to: "{{ groups['monitor'][0] }}"
+  ignore_errors: yes
+  become: true
+
+- name: "Wait for pcap file to be written"
+  wait_for:
+    timeout: 10
+
+- name: "Get PCAP file size"
+  stat:
+    path: "/var/log/pcap/{{ pcap_filename }}"
+  delegate_to: "{{ groups['monitor'][0] }}"
+  register: pcap_file
+  become: true
+
+- name: "Record cycle completion"
+  lineinfile:
+    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    line: |
+      
+      =====================================
+      Cycle Complete
+      =====================================
+      PCAP File: {{ pcap_filename }}
+      Size: {{ (pcap_file.stat.size / 1024 / 1024) | round(2) }} MB
+      End Time: {{ '%Y-%m-%d %H:%M:%S' | strftime }}
+      =====================================
+    insertafter: EOF
+  become: true

@@ -1,0 +1,27 @@
+# tasks/attack_cycle_tasks.yml
+---
+- name: "Copy attack script"
+  copy:
+    src: "{{ scripts_dir }}/syn_flood.sh"
+    dest: "/home/cybears/ddos_scripts/attack.sh"
+    mode: '0755'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ attacker_hosts }}"
+
+- name: "Start attack"
+  shell: "/home/cybears/ddos_scripts/attack.sh"
+  async: 1800  # 30 minute maximum per attack
+  poll: 10
+  delegate_to: "{{ item }}"
+  with_items: "{{ attacker_hosts }}"
+  register: attack_result
+
+- name: "Log attack initiation"
+  lineinfile:
+    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    line: "Attack started on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    insertafter: EOF
+  with_items: "{{ attack_result.results }}"
+  become: true

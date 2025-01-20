@@ -1,0 +1,59 @@
+# tasks/role_assignment.yml
+---
+- name: "Get host information for grouping"
+  set_fact:
+    all_hosts: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+    cycle_timestamp: "{{ '%Y%m%d_%H%M%S' | strftime }}"
+    attacker_count: >-
+      {% if intensity == 'high' %}
+      {{ 40 + (59 - 40 + 1) | random }}
+      {% elif intensity == 'mid' %}
+      {{ 20 + (39 - 20 + 1) | random }}
+      {% elif intensity == 'low' %}
+      {{ 1 + (19 - 1 + 1) | random }}
+      {% else %}
+      0
+      {% endif %}
+
+- name: "Calculate normal count"
+  set_fact:
+    normal_count: "{{ all_hosts|length - attacker_count|int }}"
+
+- name: "Shuffle and assign roles"
+  set_fact:
+    shuffled_hosts: "{{ all_hosts | shuffle }}"
+    
+- name: "Split into attackers and normal hosts"
+  set_fact:
+    attacker_hosts: "{{ shuffled_hosts[:attacker_count|int] }}"
+    normal_hosts: "{{ shuffled_hosts[attacker_count|int:] }}"
+
+- name: "Log role assignments"
+  copy:
+    content: |
+      =====================================
+      Attack Cycle Start - {{ cycle_timestamp }}
+      =====================================
+      Intensity Level: {{ intensity }}
+      Total Machines: {{ all_hosts|length }}
+      Number of Attackers: {{ attacker_count }}
+      Number of Normal Hosts: {{ normal_count }}
+
+      =====================================
+      Attacker Hosts ({{ attacker_count }})
+      =====================================
+      {% for host in attacker_hosts %}
+      {{ host }}:
+        IP: {{ hostvars[host]['ansible_host'] }}
+      {% endfor %}
+
+      =====================================
+      Normal Hosts ({{ normal_count }})
+      =====================================
+      {% for host in normal_hosts %}
+      {{ host }}:
+        IP: {{ hostvars[host]['ansible_host'] }}
+      {% endfor %}
+    dest: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    mode: '0644'
+  become: true

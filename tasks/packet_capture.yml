@@ -1,0 +1,28 @@
+# tasks/packet_capture.yml
+---
+- name: "Ensure PCAP directory exists"
+  file:
+    path: "/var/log/pcap"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ groups['monitor'][0] }}"
+  become: true
+
+- name: "Generate PCAP filename"
+  set_fact:
+    pcap_filename: "ddos_{{ intensity }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
+
+- name: "Start tcpdump"
+  command: "tcpdump -i any -w /var/log/pcap/{{ pcap_filename }}"
+  async: 3600  # 1 hour max per cycle
+  poll: 0
+  delegate_to: "{{ groups['monitor'][0] }}"
+  become: true
+  register: tcpdump_job
+
+- name: "Record capture start"
+  lineinfile:
+    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }}"
+    insertafter: EOF
+  become: true

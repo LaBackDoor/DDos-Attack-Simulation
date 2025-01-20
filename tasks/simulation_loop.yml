@@ -1,0 +1,30 @@
+# tasks/simulation_loop.yml
+---
+- name: "Check simulation duration"
+  set_fact:
+    current_time: "{{ lookup('pipe', 'date +%s') }}"
+    should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < max_duration|int }}"
+
+- name: "Calculate next attack delay"
+  set_fact:
+    next_attack_delay: >-
+      {% if intensity == 'high' %}
+      {{ 1200 + (2400 - 1200 + 1) | random }}
+      {% elif intensity == 'mid' %}
+      {{ 2400 + (3600 - 2400 + 1) | random }}
+      {% else %}
+      {{ 3600 + (4800 - 3600 + 1) | random }}
+      {% endif %}
+  when: should_continue
+
+- name: "Log cycle completion"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Attack cycle completed at {{ '%Y-%m-%d %H:%M:%S' | strftime }}. Next attack in {{ next_attack_delay }} seconds"
+    insertafter: EOF
+  when: should_continue
+  become: true
+
+- name: "Run next cycle"
+  include_tasks: tasks/role_assignment.yml
+  when: should_continue

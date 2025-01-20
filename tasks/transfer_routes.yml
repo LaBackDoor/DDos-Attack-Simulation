@@ -1,0 +1,29 @@
+# tasks/transfer_routes.yml
+---
+- name: "Create script directory on remote hosts"
+  file:
+    path: "/home/cybears/ddos_scripts"
+    state: directory
+    mode: '0755'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+
+- name: "Transfer routes file to all clients"
+  copy:
+    src: "/home/cybears/Downloads/ddos_scripts/get_routes/final_routes.txt"
+    dest: "/home/cybears/ddos_scripts/routes.txt"
+    mode: '0644'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+
+- name: "Log routes file distribution"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Routes file distributed to {{ item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    insertafter: EOF
+  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+  become: true
