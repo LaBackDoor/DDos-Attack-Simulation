@@ -1,12 +1,10 @@
 # tasks/packet_capture.yml
 ---
-- name: "Ensure PCAP directory exists with proper permissions"
+- name: "Ensure PCAP directory exists"
   file:
     path: "/var/log/pcap"
     state: directory
     mode: '0755'
-    owner: root
-    group: root
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
 
@@ -18,10 +16,10 @@
   shell: |
     nohup tcpdump -i any -w '/var/log/pcap/{{ pcap_filename }}' 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
-  async: 3600
-  poll: 0
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
+  async: 3600
+  poll: 0
   register: tcpdump_job
 
 - name: "Wait for tcpdump to start"
@@ -34,10 +32,6 @@
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
   ignore_errors: true
-
-- name: "Debug tcpdump errors"
-  debug:
-    msg: "Tcpdump errors: {{ tcpdump_errors.stdout }}"
 
 - name: "Verify tcpdump is running"
   shell: "ps aux | grep '[t]cpdump'"
