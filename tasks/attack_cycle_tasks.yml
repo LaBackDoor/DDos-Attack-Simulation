@@ -1,5 +1,23 @@
 # tasks/attack_cycle_tasks.yml
 ---
+- name: "Calculate attack duration based on intensity"
+  set_fact:
+    attack_duration: >-
+      {% if intensity == 'high' %}
+      {{ 900 + (1800 - 900 + 1) | random }}
+      {% elif intensity == 'mid' %}
+      {{ 600 + (900 - 600 + 1) | random }}
+      {% else %}
+      {{ 300 + (600 - 300 + 1) | random }}
+      {% endif %}
+
+- name: "Log attack duration"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Setting attack duration to {{ attack_duration }} seconds for this cycle"
+    insertafter: EOF
+  become: true
+
 - name: "Copy attack script"
   copy:
     src: "{{ scripts_dir }}/syn_flood.sh"
@@ -19,12 +37,12 @@
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
 
-- name: "Execute attack script"
+- name: "Execute attack script with duration"
   shell: |
     cd /home/cybears/ddos_scripts
-    ./attack.sh 2>&1 | tee attack.log
-  async: 1800  # 30 minute maximum per attack
-  poll: 10
+    ./attack.sh {{ attack_duration }} 2>&1 | tee attack.log
+  async: "{{ attack_duration + 300 }}"
+  poll: 30
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
   register: attack_result
@@ -34,7 +52,18 @@
 - name: "Log attack execution"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
-    line: "Attack executed on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    line: "Attack executed on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}, planned duration: {{ attack_duration }} seconds"
     insertafter: EOF
   with_items: "{{ attack_result.results }}"
+  become: true
+
+- name: "Wait for attack duration"
+  wait_for:
+    timeout: "{{ attack_duration }}"
+
+- name: "Log attack cycle completion"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Attack cycle completed at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
+    insertafter: EOF
   become: true
