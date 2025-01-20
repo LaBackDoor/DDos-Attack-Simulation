@@ -14,37 +14,19 @@
   set_fact:
     pcap_filename: "ddos_{{ intensity }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
 
-- name: "Check tcpdump installation"
-  command: "which tcpdump"
-  register: tcpdump_check
-  delegate_to: "{{ groups['monitor'][0] }}"
-  become: true
-  ignore_errors: true
-
-- name: "Debug tcpdump installation"
-  debug:
-    msg: "tcpdump binary location: {{ tcpdump_check.stdout }}"
-  when: tcpdump_check.rc == 0
-
-- name: "Check interface list"
-  shell: "ip link show | grep -v 'link\\|loopback' | cut -d: -f2 | tr -d ' '"
-  register: interface_list
-  delegate_to: "{{ groups['monitor'][0] }}"
-  become: true
-
-- name: "Debug available interfaces"
-  debug:
-    msg: "Available interfaces: {{ interface_list.stdout_lines }}"
-
 - name: "Start tcpdump with verbose output"
   shell: |
-    tcpdump -i any -w /var/log/pcap/{{ pcap_filename }} -v 2>/var/log/pcap/tcpdump_error.log &
+    nohup tcpdump -i any -w '/var/log/pcap/{{ pcap_filename }}' 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
   async: 3600
   poll: 0
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
   register: tcpdump_job
+
+- name: "Wait for tcpdump to start"
+  pause:
+    seconds: 2
 
 - name: "Check tcpdump error log"
   shell: "cat /var/log/pcap/tcpdump_error.log"
@@ -58,7 +40,7 @@
     msg: "Tcpdump errors: {{ tcpdump_errors.stdout }}"
 
 - name: "Verify tcpdump is running"
-  shell: "pgrep tcpdump"
+  shell: "ps aux | grep '[t]cpdump'"
   register: tcpdump_check
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
@@ -69,6 +51,6 @@
 - name: "Record capture start"
   lineinfile:
     path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
-    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }} (Job ID: {{ tcpdump_job.ansible_job_id }})"
+    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }}"
     insertafter: EOF
   become: true
