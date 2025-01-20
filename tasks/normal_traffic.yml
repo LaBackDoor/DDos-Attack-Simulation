@@ -24,18 +24,68 @@
   delegate_to: "{{ item }}"
   with_items: "{{ normal_hosts }}"
 
+- name: "Ensure ddos_scripts directory has correct permissions"
+  file:
+    path: "/home/cybears/ddos_scripts"
+    state: directory
+    mode: '0755'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  become: true
+
 - name: "Start normal traffic script"
-  shell: "cd /home/cybears/ddos_scripts && nohup ./normal.sh > normal.log 2>&1 & echo $!"
+  shell: |
+    cd /home/cybears/ddos_scripts
+    nohup ./normal.sh > normal.log 2>&1 &
+    pid=$!
+    echo $pid > /home/cybears/ddos_scripts/normal.pid
   args:
     chdir: "/home/cybears/ddos_scripts"
   delegate_to: "{{ item }}"
   with_items: "{{ normal_hosts }}"
-  register: normal_pid
+  become: true
+  become_user: cybears
+
+- name: "Ensure PID file has correct permissions"
+  file:
+    path: "/home/cybears/ddos_scripts/normal.pid"
+    mode: '0644'
+    owner: cybears
+    group: cybears
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  become: true
+
+- name: "Verify PID file exists"
+  stat:
+    path: "/home/cybears/ddos_scripts/normal.pid"
+  register: pid_check
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  become: true
+  failed_when: not pid_check.stat.exists
 
 - name: "Record normal traffic start"
+  shell: "cat /home/cybears/ddos_scripts/normal.pid"
+  register: normal_pid
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  become: true
+
+- name: "Log normal traffic start"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
     line: "Normal traffic started on {{ item.item }} (PID: {{ item.stdout }}) at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
     insertafter: EOF
   with_items: "{{ normal_pid.results }}"
   become: true
+
+- name: "Verify normal traffic script is running"
+  shell: "pgrep -f normal.sh"
+  register: process_check
+  delegate_to: "{{ item }}"
+  with_items: "{{ normal_hosts }}"
+  become: true
+  ignore_errors: yes

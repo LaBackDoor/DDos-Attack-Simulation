@@ -1,26 +1,48 @@
 # tasks/cleanup_tasks.yml
 ---
-- name: "Stop all normal traffic scripts"
-  shell: "pkill -f normal.sh || true"
+- name: "Pre-cleanup connection check"
+  wait_for:
+    timeout: 5
+  run_once: true
+
+- name: "Stop normal traffic processes with connection persistence"
+  shell: |
+    nohup bash -c '
+    pkill -f normal.sh
+    sleep 2
+    pkill -9 -f normal.sh
+    ' >/dev/null 2>&1 &
   delegate_to: "{{ item }}"
   ignore_errors: yes
   with_items: "{{ normal_hosts }}"
   become: true
+  async: 30
+  poll: 0
 
-- name: "Stop any running attack scripts"
-  shell: "pkill -f attack.sh || true"
+- name: "Stop attack processes with connection persistence"
+  shell: |
+    nohup bash -c '
+    pkill -f attack.sh
+    sleep 2
+    pkill -9 -f attack.sh
+    ' >/dev/null 2>&1 &
   delegate_to: "{{ item }}"
   ignore_errors: yes
   with_items: "{{ attacker_hosts }}"
   become: true
+  async: 30
+  poll: 0
 
-- name: "Stop tcpdump on monitor"
-  shell: "pkill tcpdump || true"
+- name: "Stop tcpdump process"
+  shell: |
+    pkill tcpdump
+    sleep 2
+    pkill -9 tcpdump || true
   delegate_to: "{{ groups['monitor'][0] }}"
   ignore_errors: yes
   become: true
 
-- name: "Wait for pcap file to be written"
+- name: "Wait for processes to stop"
   wait_for:
     timeout: 10
 

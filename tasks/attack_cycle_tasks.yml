@@ -48,8 +48,8 @@
 - name: "Execute attack script with duration"
   shell: |
     cd /home/cybears/ddos_scripts
-    ./attack.sh {{ attack_duration }} 2>&1 | tee attack.log
-  async: "{{ attack_duration + 300 }}"
+    ./attack.sh {{ attack_duration|int }} 2>&1 | tee attack.log
+  async: "{{ (attack_duration|int) + 300 }}"
   poll: -1
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
