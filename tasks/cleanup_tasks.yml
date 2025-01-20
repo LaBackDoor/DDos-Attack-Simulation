@@ -33,11 +33,16 @@
   async: 30
   poll: 0
 
-- name: "Stop tcpdump process"
+- name: "Gracefully stop tcpdump"
   shell: |
-    pkill tcpdump
-    sleep 2
-    pkill -9 tcpdump || true
+    pid=$(pgrep tcpdump)
+    if [ ! -z "$pid" ]; then
+      kill $pid
+      sleep 5
+      if kill -0 $pid 2>/dev/null; then
+        kill -9 $pid
+      fi
+    fi
   delegate_to: "{{ groups['monitor'][0] }}"
   ignore_errors: yes
   become: true

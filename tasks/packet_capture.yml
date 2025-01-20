@@ -14,11 +14,20 @@
 
 - name: "Start tcpdump"
   command: "tcpdump -i any -w /var/log/pcap/{{ pcap_filename }}"
-  async: 3600  # 1 hour max per cycle
+  async: 3600
   poll: 0
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
   register: tcpdump_job
+
+- name: "Verify tcpdump is running"
+  shell: "pgrep tcpdump"
+  register: tcpdump_check
+  delegate_to: "{{ groups['monitor'][0] }}"
+  become: true
+  retries: 3
+  delay: 2
+  until: tcpdump_check.rc == 0
 
 - name: "Record capture start"
   lineinfile:
