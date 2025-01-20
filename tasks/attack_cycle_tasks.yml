@@ -37,12 +37,12 @@
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
 
-- name: "Log attack execution"
+- name: "Log attack start"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
-    line: "Attack executed on {{ item.item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}, planned duration: {{ attack_duration }} seconds"
+    line: "Starting attack on {{ item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}, planned duration: {{ attack_duration }} seconds"
     insertafter: EOF
-  with_items: "{{ attack_result.results }}"
+  with_items: "{{ attacker_hosts }}"
   become: true
 
 - name: "Execute attack script with duration"
