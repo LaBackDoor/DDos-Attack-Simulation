@@ -25,6 +25,15 @@
   when: should_continue
   become: true
 
-- name: "Run next cycle"
-  include_tasks: tasks/role_assignment.yml
-  when: should_continue
+- name: "Reassign roles"
+ include_tasks: tasks/role_assignment.yml
+ when: should_continue
+
+- name: "Wait before next cycle"
+ wait_for:
+   timeout: "{{ next_attack_delay }}"
+ when: should_continue
+
+- name: "Start next attack"
+ include_tasks: tasks/attack_cycle_tasks.yml 
+ when: should_continue

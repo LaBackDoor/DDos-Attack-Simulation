@@ -11,6 +11,11 @@
       {{ 300 + (600 - 300 + 1) | random }}
       {% endif %}
 
+
+- name: "Set buffer time"
+  set_fact:
+    buffer_time: 300
+    
 - name: "Log attack duration"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
@@ -45,17 +50,20 @@
   with_items: "{{ attacker_hosts }}"
   become: true
 
-- name: "Execute attack script with duration"
+- name: "Execute attack script"
   shell: |
     cd /home/cybears/ddos_scripts
     ./attack.sh {{ attack_duration|int }} 2>&1 | tee attack.log
-  async: "{{ (attack_duration|int) + 300 }}"
-  poll: -1
+  async: "{{ attack_duration|int + buffer_time }}"
+  poll: 0
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
-  register: attack_result
   become: true
   become_user: cybears
+
+- name: "Sleep for attack duration plus buffer"
+  wait_for:
+    timeout: "{{ attack_duration|int + buffer_time }}"
 
 - name: "Log attack cycle completion"
   lineinfile:
