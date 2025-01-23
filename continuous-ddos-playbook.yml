@@ -76,3 +76,19 @@
       rescue:
         - name: "Handle simulation interruption"
           include_tasks: tasks/cleanup_tasks.yml
+
+  post_tasks:
+    - name: "Log simulation end"
+      lineinfile:
+        path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+        line: |
+          
+          =====================================
+          Simulation Complete - Running Final Cleanup
+          =====================================
+          End Time: {{ '%Y-%m-%d %H:%M:%S' | strftime }}
+        insertafter: EOF
+      become: true
+
+    - name: "Execute reboot cleanup"
+      include_playbook: tasks/reboot_cleanup.yml
