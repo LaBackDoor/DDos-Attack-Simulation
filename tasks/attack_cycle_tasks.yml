@@ -50,7 +50,7 @@
     cd /home/cybears/ddos_scripts
     ./attack.sh {{ attack_duration|int }} 2>&1 | tee attack.log
   async: "{{ (attack_duration|int) + 300 }}"
-  poll: -1
+  poll: 0
   delegate_to: "{{ item }}"
   with_items: "{{ attacker_hosts }}"
   register: attack_result

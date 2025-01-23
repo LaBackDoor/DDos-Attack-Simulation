@@ -3,7 +3,7 @@
 - name: "Check simulation duration"
   set_fact:
     current_time: "{{ lookup('pipe', 'date +%s') }}"
-    should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < max_duration|int }}"
+    should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < sim_duration|int }}"
 
 - name: "Calculate next attack delay"
   set_fact:
@@ -25,6 +25,15 @@
   when: should_continue
   become: true
 
-- name: "Run next cycle"
+- name: "Reassign roles"
   include_tasks: tasks/role_assignment.yml
+  when: should_continue
+
+- name: "Wait before next cycle"
+  wait_for:
+  timeout: "{{ next_attack_delay }}"
+  when: should_continue
+
+- name: "Start next attack"
+  include_tasks: tasks/attack_cycle_tasks.yml
   when: should_continue
