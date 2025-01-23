@@ -26,14 +26,14 @@
   become: true
 
 - name: "Reassign roles"
- include_tasks: tasks/role_assignment.yml
- when: should_continue
+  include_tasks: tasks/role_assignment.yml
+  when: should_continue
 
 - name: "Wait before next cycle"
- wait_for:
+  wait_for:
    timeout: "{{ next_attack_delay }}"
- when: should_continue
+  when: should_continue
 
 - name: "Start next attack"
- include_tasks: tasks/attack_cycle_tasks.yml
- when: should_continue
+  include_tasks: tasks/attack_cycle_tasks.yml
+  when: should_continue
