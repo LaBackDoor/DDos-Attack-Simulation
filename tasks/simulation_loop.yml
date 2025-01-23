@@ -3,7 +3,7 @@
 - name: "Check simulation duration"
   set_fact:
     current_time: "{{ lookup('pipe', 'date +%s') }}"
-    should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < max_duration|int }}"
+    should_continue: "{{ (lookup('pipe', 'date +%s')|int - simulation_start|int) < sim_duration|int }}"
 
 - name: "Calculate next attack delay"
   set_fact:

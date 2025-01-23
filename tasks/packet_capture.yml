@@ -44,7 +44,7 @@
 
 - name: "Record capture start"
   lineinfile:
-    path: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
     line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }}"
     insertafter: EOF
   become: true
