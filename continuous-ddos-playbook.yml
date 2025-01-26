@@ -91,4 +91,4 @@
       become: true
 
     - name: "Execute reboot cleanup"
-      include_playbook: tasks/reboot_cleanup.yml
+      include_tasks: tasks/reboot_cleanup.yml
