@@ -29,11 +29,27 @@
   include_tasks: tasks/role_assignment.yml
   when: should_continue
 
-- name: "Wait before next cycle"
-  wait_for:
-   timeout: "{{ next_attack_delay }}"
+- name: "Start packet capture"
+  include_tasks: tasks/packet_capture.yml
   when: should_continue
 
-- name: "Start next attack"
+- name: "Configure and start normal traffic"
+  include_tasks: tasks/normal_traffic.yml
+  when: should_continue
+
+- name: "Execute attack phase"
   include_tasks: tasks/attack_cycle_tasks.yml
+  when: should_continue
+
+- name: "Cleanup cycle"
+  include_tasks: tasks/cleanup_tasks.yml
+  when: should_continue
+
+- name: "Wait before next cycle"
+  wait_for:
+    timeout: "{{ next_attack_delay }}"
+  when: should_continue
+
+- name: "Continue simulation"
+  include_tasks: tasks/simulation_loop.yml
   when: should_continue

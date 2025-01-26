@@ -1,52 +1,45 @@
-# reboot_cleanup.yml
 ---
-- name: Reboot machines to clean up stuck processes
-  hosts: all
-  gather_facts: true
-  become: true
-  
-  tasks:
-    - name: Check for running tcpdump processes
-      shell: "pgrep tcpdump || echo 'No tcpdump'"
-      register: tcpdump_check
-      ignore_errors: true
+- name: Check for running tcpdump processes
+  shell: "pgrep tcpdump || echo 'No tcpdump'"
+  register: tcpdump_check
+  ignore_errors: true
 
-    - name: Check for running hping3 processes
-      shell: "pgrep hping3 || echo 'No hping3'"
-      register: hping_check
-      ignore_errors: true
+- name: Check for running hping3 processes
+  shell: "pgrep hping3 || echo 'No hping3'"
+  register: hping_check
+  ignore_errors: true
 
-    - name: Kill any running tcpdump processes
-      shell: "pkill tcpdump"
-      when: "'No tcpdump' not in tcpdump_check.stdout"
-      ignore_errors: true
+- name: Kill any running tcpdump processes
+  shell: "pkill tcpdump"
+  when: "'No tcpdump' not in tcpdump_check.stdout"
+  ignore_errors: true
 
-    - name: Kill any running hping3 processes
-      shell: "pkill hping3"
-      when: "'No hping3' not in hping_check.stdout"
-      ignore_errors: true
+- name: Kill any running hping3 processes
+  shell: "pkill hping3"
+  when: "'No hping3' not in hping_check.stdout"
+  ignore_errors: true
 
-    - name: Wait for processes to stop
-      pause:
-        seconds: 5
+- name: Wait for processes to stop
+  pause:
+    seconds: 5
 
-    - name: Reboot the machine
-      reboot:
-        msg: "Rebooting to clean up stuck processes"
-        connect_timeout: 5
-        reboot_timeout: 300
-        pre_reboot_delay: 0
-        post_reboot_delay: 30
-        test_command: whoami
+- name: Reboot the machine
+  reboot:
+    msg: "Rebooting to clean up stuck processes"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: whoami
 
-    - name: Verify system is back up
-      wait_for_connection:
-        delay: 10
-        timeout: 300
+- name: Verify system is back up
+  wait_for_connection:
+    delay: 10
+    timeout: 300
 
-    - name: Check no tcpdump or hping3 processes are running
-      shell: "pgrep {{ item }} || echo 'No {{ item }}'"
-      with_items:
-        - tcpdump
-        - hping3
-      register: process_check
+- name: Check no tcpdump or hping3 processes are running
+  shell: "pgrep {{ item }} || echo 'No {{ item }}'"
+  with_items:
+    - tcpdump
+    - hping3
+  register: process_check
