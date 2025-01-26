@@ -10,15 +10,14 @@
 
 - name: "Generate PCAP filename"
   set_fact:
-    pcap_filename: "ddos_{{ intensity }}_{{ simulation_start }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
-
-- name: "Start tcpdump with verbose output"
+    pcap_filename: "ddos_{{ simulation_start }}_{{ intensity }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
+- name: "Start tcpdump on ens192"
   shell: |
-    nohup tcpdump -i any -w '/var/log/pcap/{{ pcap_filename }}' 2>/var/log/pcap/tcpdump_error.log &
+    nohup tcpdump -i ens192 -s 0 -n -B 4096 -w '/var/log/pcap/{{ pcap_filename }}' 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
   delegate_to: "{{ groups['monitor'][0] }}"
   become: true
-  async: 3600
+  async: 86400
   poll: 0
   register: tcpdump_job
 
@@ -45,6 +44,6 @@
 - name: "Record capture start"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
-    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }}"
+    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }} on interface ens192 with buffer size 4096"
     insertafter: EOF
   become: true
