@@ -54,6 +54,6 @@
       {{ host }}:
         IP: {{ hostvars[host]['ansible_host'] }}
       {% endfor %}
-    dest: "{{ log_dir }}/ddos_sim_{{ cycle_timestamp }}.log"
+    dest: "{{ log_dir }}/ddos_sim_{{ simulation_start }}_{{ cycle_timestamp }}.log"
     mode: '0644'
   become: true

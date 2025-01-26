@@ -10,7 +10,7 @@
 
 - name: "Generate PCAP filename"
   set_fact:
-    pcap_filename: "ddos_{{ intensity }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
+    pcap_filename: "ddos_{{ intensity }}_{{ simulation_start }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
 
 - name: "Start tcpdump with verbose output"
   shell: |
