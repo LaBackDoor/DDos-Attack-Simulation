@@ -52,6 +52,8 @@
   delegate_to: "{{ groups['monitor'][0] }}"
   register: pcap_info
   become: true
+  async: 30
+  poll: 5
 
 - name: "Record cycle completion"
   lineinfile:
