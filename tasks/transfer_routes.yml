@@ -8,7 +8,7 @@
     owner: cybears
     group: cybears
   delegate_to: "{{ item }}"
-  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+  with_items: "{{ groups['subnet_a'] }}"
 
 - name: "Transfer routes file to all clients"
   copy:
@@ -18,12 +18,12 @@
     owner: cybears
     group: cybears
   delegate_to: "{{ item }}"
-  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+  with_items: "{{ groups['subnet_a'] }}"
 
 - name: "Log routes file distribution"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
     line: "Routes file distributed to {{ item }} at: {{ '%Y-%m-%d %H:%M:%S' | strftime }}"
     insertafter: EOF
-  with_items: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+  with_items: "{{ groups['subnet_a'] }}"
   become: true

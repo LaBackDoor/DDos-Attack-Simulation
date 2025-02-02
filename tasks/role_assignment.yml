@@ -2,7 +2,7 @@
 ---
 - name: "Get host information for grouping"
   set_fact:
-    all_hosts: "{{ groups['subnet_a'] + groups['subnet_b'] + groups['subnet_c'] }}"
+    all_hosts: "{{ groups['subnet_a'] }}"
     cycle_timestamp: "{{ '%Y%m%d_%H%M%S' | strftime }}"
     attacker_count: >-
       {% if intensity == 'high' %}
