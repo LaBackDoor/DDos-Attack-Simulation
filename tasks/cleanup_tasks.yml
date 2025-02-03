@@ -46,14 +46,21 @@
   wait_for:
     timeout: 10
 
-- name: "Get PCAP information"
+- name: "Check if PCAP file exists"
   stat:
     path: "/var/log/pcap/{{ pcap_filename }}"
   delegate_to: "{{ groups['monitor'][0] }}"
-  register: pcap_info
+  register: pcap_exists
   become: true
-  async: 30
-  poll: 5
+  ignore_errors: yes
+
+- name: "Get PCAP file size if exists"
+  shell: "du -b /var/log/pcap/{{ pcap_filename }} | cut -f1"
+  delegate_to: "{{ groups['monitor'][0] }}"
+  register: pcap_size
+  become: true
+  when: pcap_exists.stat is defined and pcap_exists.stat.exists
+  ignore_errors: yes
 
 - name: "Record cycle completion"
   lineinfile:
@@ -64,9 +71,9 @@
       Cycle Complete
       =====================================
       PCAP File: {{ pcap_filename }}
-      Size: {{ (pcap_info.stat.size | default(0) / 1024 / 1024) | round(2) }} MB
+      Size: {{ ((pcap_size.stdout|default('0')|int) / 1024 / 1024) | round(2) }} MB
       End Time: {{ '%Y-%m-%d %H:%M:%S' | strftime }}
       =====================================
     insertafter: EOF
   become: true
-  when: pcap_info.stat is defined and pcap_info.stat.exists
+  ignore_errors: yes
