@@ -28,11 +28,23 @@
   delegate_to: "{{ item }}"
   with_items: "{{ groups['webservers'] }}"
 
+- name: "Kill any existing tcpdump processes"
+  shell: "pkill tcpdump || true"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
+  become: true
+  ignore_errors: true
+
+- name: "Wait for processes to stop"
+  pause:
+    seconds: 2
+
 - name: "Start tcpdump on each web server"
   shell: |
     nohup tcpdump -i any -s 0 -n -B 4096 \
+    -C 1000 \
     'tcp and (port 80 or port 443) and (tcp[tcpflags] & (tcp-syn|tcp-ack|tcp-push|tcp-rst) != 0) and not host 10.0.1.4' \
-    -w '/var/log/pcap/{{ pcap_filename }}' \
+    -w '/var/log/pcap/{{ pcap_filename }}_%d' \
     -v 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
   delegate_to: "{{ item }}"
@@ -43,7 +55,7 @@
 
 - name: "Wait for tcpdump to start"
   pause:
-    seconds: 2
+    seconds: 3
 
 - name: "Check tcpdump error log"
   shell: "cat /var/log/pcap/tcpdump_error.log"

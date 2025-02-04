@@ -1,0 +1,56 @@
+# server_maintenance.yml
+---
+- name: Server Maintenance and Reboot
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Check if tcpdump is running
+      shell: "pgrep tcpdump || echo 'Not running'"
+      register: tcpdump_check
+      ignore_errors: true
+
+    - name: Kill tcpdump if running
+      shell: |
+        pkill tcpdump
+        sleep 2
+        pkill -9 tcpdump || true
+      when: tcpdump_check.stdout != 'Not running'
+      ignore_errors: true
+
+    - name: Clear PCAP directory
+      file:
+        path: "/var/log/pcap"
+        state: absent
+
+    - name: Recreate PCAP directory
+      file:
+        path: "/var/log/pcap"
+        state: directory
+        mode: '0755'
+        owner: cybears
+        group: cybears
+
+    - name: Reboot server
+      reboot:
+        msg: "Rebooting server for maintenance"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami
+
+    - name: Wait for server to complete reboot
+      wait_for_connection:
+        delay: 30
+        timeout: 300
+
+    - name: Verify web services are running
+      uri:
+        url: "http://{{ ansible_host }}"
+        method: GET
+        status_code: 200
+      register: http_check
+      retries: 6
+      delay: 10
+      until: http_check.status == 200
+      ignore_errors: true
