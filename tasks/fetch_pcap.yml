@@ -1,0 +1,48 @@
+# tasks/fetch_pcap.yml
+---
+- name: "Create local PCAP directory"
+  file:
+    path: "{{ log_dir }}/pcaps"
+    state: directory
+    mode: '0755'
+  run_once: true
+  delegate_to: localhost
+  become: true
+
+- name: "Check if PCAP file exists on web servers"
+  stat:
+    path: "/var/log/pcap/{{ pcap_filename }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
+  register: pcap_exists
+  become: true
+  ignore_errors: yes
+
+- name: "Get PCAP file size if exists"
+  shell: "du -b /var/log/pcap/{{ pcap_filename }} | cut -f1"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
+  register: pcap_size
+  become: true
+  when: pcap_exists.results[ansible_loop.index0].stat is defined and pcap_exists.results[ansible_loop.index0].stat.exists
+  ignore_errors: yes
+
+- name: "Fetch PCAP files from web servers"
+  fetch:
+    src: "/var/log/pcap/{{ pcap_filename }}"
+    dest: "{{ log_dir }}/pcaps/"
+    flat: yes
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
+  become: true
+  when: pcap_exists.results[ansible_loop.index0].stat is defined and pcap_exists.results[ansible_loop.index0].stat.exists
+  ignore_errors: yes
+
+- name: "Record PCAP retrieval"
+  lineinfile:
+    path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
+    line: "Retrieved PCAP file from {{ item }}: {{ pcap_filename }} (Size: {{ pcap_size.results[ansible_loop.index0].stdout|default('0')|int / 1024 / 1024 | round(2) }} MB)"
+    insertafter: EOF
+  with_items: "{{ groups['webservers'] }}"
+  become: true
+  ignore_errors: yes

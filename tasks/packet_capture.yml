@@ -7,7 +7,8 @@
     mode: '0755'
     owner: cybears
     group: cybears
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
   become: true
 
 - name: "Set proper permissions for error log"
@@ -17,25 +18,28 @@
     mode: '0644'
     owner: cybears
     group: cybears
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
   become: true
 
-- name: "Generate PCAP filename"
+- name: "Generate PCAP filename for each server"
   set_fact:
-    pcap_filename: "ddos_{{ simulation_start }}_{{ intensity }}_{{ cycle_timestamp }}_{{ attacker_count }}-attackers.pcap"
+    pcap_filename: "ddos_{{ simulation_start }}_{{ intensity }}_{{ cycle_timestamp }}_{{ ansible_host }}.pcap"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
 
-- name: "Start tcpdump on ens192"
+- name: "Start tcpdump on each web server"
   shell: |
-    nohup tcpdump -i ens192 -s 0 -n -B 4096 \
-    '((tcp and (port 80 or port 443)) or (tcp and (tcp[tcpflags] & (tcp-syn|tcp-ack|tcp-push|tcp-rst) != 0))) and (net 10.0.1.0/24)' \
+    nohup tcpdump -i any -s 0 -n -B 4096 \
+    'tcp and (port 80 or port 443) and (tcp[tcpflags] & (tcp-syn|tcp-ack|tcp-push|tcp-rst) != 0)' \
     -w '/var/log/pcap/{{ pcap_filename }}' \
     -v 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
   become: true
   async: 86400
   poll: 0
-  register: tcpdump_job
 
 - name: "Wait for tcpdump to start"
   pause:
@@ -44,14 +48,16 @@
 - name: "Check tcpdump error log"
   shell: "cat /var/log/pcap/tcpdump_error.log"
   register: tcpdump_errors
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
   become: true
   ignore_errors: true
 
 - name: "Verify tcpdump is running"
   shell: "ps aux | grep -v grep | grep tcpdump"
   register: tcpdump_check
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['webservers'] }}"
   become: true
   retries: 3
   delay: 2
@@ -60,6 +66,7 @@
 - name: "Record capture start"
   lineinfile:
     path: "{{ log_dir }}/master_sim_{{ simulation_start }}.log"
-    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} - File: {{ pcap_filename }} on interface ens192 with buffer size 4096"
+    line: "Packet capture started at {{ '%Y-%m-%d %H:%M:%S' | strftime }} on {{ item }} - File: {{ pcap_filename }}"
     insertafter: EOF
+  with_items: "{{ groups['webservers'] }}"
   become: true

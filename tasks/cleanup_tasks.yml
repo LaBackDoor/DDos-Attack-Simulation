@@ -33,34 +33,23 @@
   async: 30
   poll: 0
 
-- name: "Stop tcpdump process"
+- name: "Stop tcpdump processes on web servers"
   shell: |
     pkill tcpdump
     sleep 2
     pkill -9 tcpdump || true
-  delegate_to: "{{ groups['monitor'][0] }}"
+  delegate_to: "{{ item }}"
   ignore_errors: yes
+  with_items: "{{ groups['webservers'] }}"
   become: true
 
 - name: "Wait for processes to stop"
   wait_for:
     timeout: 10
 
-- name: "Check if PCAP file exists"
-  stat:
-    path: "/var/log/pcap/{{ pcap_filename }}"
-  delegate_to: "{{ groups['monitor'][0] }}"
-  register: pcap_exists
-  become: true
-  ignore_errors: yes
-
-- name: "Get PCAP file size if exists"
-  shell: "du -b /var/log/pcap/{{ pcap_filename }} | cut -f1"
-  delegate_to: "{{ groups['monitor'][0] }}"
-  register: pcap_size
-  become: true
-  when: pcap_exists.stat is defined and pcap_exists.stat.exists
-  ignore_errors: yes
+# Include the fetch PCAP tasks
+- name: "Fetch PCAP files"
+  include_tasks: tasks/fetch_pcap.yml
 
 - name: "Record cycle completion"
   lineinfile:
@@ -70,8 +59,6 @@
       =====================================
       Cycle Complete
       =====================================
-      PCAP File: {{ pcap_filename }}
-      Size: {{ ((pcap_size.stdout|default('0')|int) / 1024 / 1024) | round(2) }} MB
       End Time: {{ '%Y-%m-%d %H:%M:%S' | strftime }}
       =====================================
     insertafter: EOF
