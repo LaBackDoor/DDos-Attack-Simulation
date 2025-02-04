@@ -48,8 +48,8 @@
     timeout: 10
 
 # Include the fetch PCAP tasks
-- name: "Fetch PCAP files"
-  include_tasks: tasks/fetch_pcap.yml
+# - name: "Fetch PCAP files"
+#   include_tasks: tasks/fetch_pcap.yml
 
 - name: "Record cycle completion"
   lineinfile:
