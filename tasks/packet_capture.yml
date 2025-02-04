@@ -41,7 +41,7 @@
 
 - name: "Start tcpdump on each web server"
   shell: |
-    nohup tcpdump -i any -s 0 -n -B 4096 \
+    nohup /usr/sbin/tcpdump -i any -s 0 -n -B 4096 \
     -C 1000 \
     'tcp and (port 80 or port 443) and (tcp[tcpflags] & (tcp-syn|tcp-ack|tcp-push|tcp-rst) != 0) and not host 10.0.1.4' \
     -w '/var/log/pcap/{{ pcap_filename }}_%d' \
@@ -66,13 +66,15 @@
   ignore_errors: true
 
 - name: "Verify tcpdump is running"
-  shell: "ps aux | grep -v grep | grep tcpdump"
+  shell: |
+    pgrep -f "tcpdump.*{{ pcap_filename }}" || 
+    (cat /var/log/pcap/tcpdump_error.log && exit 1)
   register: tcpdump_check
   delegate_to: "{{ item }}"
   with_items: "{{ groups['webservers'] }}"
   become: true
   retries: 3
-  delay: 2
+  delay: 5
   until: tcpdump_check.rc == 0
 
 - name: "Record capture start"
