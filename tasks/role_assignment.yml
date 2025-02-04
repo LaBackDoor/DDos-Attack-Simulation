@@ -1,28 +1,42 @@
 # tasks/role_assignment.yml
+# tasks/role_assignment.yml
 ---
 - name: "Get host information for grouping"
   set_fact:
     all_hosts: "{{ groups['subnet_a'] }}"
     cycle_timestamp: "{{ '%Y%m%d_%H%M%S' | strftime }}"
+    total_hosts: "{{ groups['subnet_a'] | length }}"
+
+- name: "Calculate attacker percentages"
+  set_fact:
+    high_min_percent: 0.65
+    high_max_percent: 0.85
+    mid_min_percent: 0.35
+    mid_max_percent: 0.65
+    low_min_percent: 0.05
+    low_max_percent: 0.35
+
+- name: "Calculate dynamic attacker count"
+  set_fact:
     attacker_count: >-
       {% if intensity == 'high' %}
-      {{ 40 + (59 - 40 + 1) | random }}
+      {{ ((total_hosts * high_min_percent) | round | int) + (((total_hosts * high_max_percent) - (total_hosts * high_min_percent)) | round | int | random) }}
       {% elif intensity == 'mid' %}
-      {{ 20 + (39 - 20 + 1) | random }}
+      {{ ((total_hosts * mid_min_percent) | round | int) + (((total_hosts * mid_max_percent) - (total_hosts * mid_min_percent)) | round | int | random) }}
       {% elif intensity == 'low' %}
-      {{ 1 + (19 - 1 + 1) | random }}
+      {{ ((total_hosts * low_min_percent) | round | int) + (((total_hosts * low_max_percent) - (total_hosts * low_min_percent)) | round | int | random) }}
       {% else %}
       0
       {% endif %}
 
 - name: "Calculate normal count"
   set_fact:
-    normal_count: "{{ all_hosts|length - attacker_count|int }}"
+    normal_count: "{{ total_hosts - attacker_count|int }}"
 
 - name: "Shuffle and assign roles"
   set_fact:
     shuffled_hosts: "{{ all_hosts | shuffle }}"
-    
+
 - name: "Split into attackers and normal hosts"
   set_fact:
     attacker_hosts: "{{ shuffled_hosts[:attacker_count|int] }}"
