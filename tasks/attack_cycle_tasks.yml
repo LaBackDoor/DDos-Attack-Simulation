@@ -63,9 +63,9 @@
   become: true
   become_user: cybears
 
-- name: "Sleep for attack duration plus buffer"
+- name: "Sleep for attack duration"
   wait_for:
-    timeout: "{{ attack_duration|int + buffer_time }}"
+    timeout: "{{ attack_duration|int }}"
 
 - name: "Log attack cycle completion"
   lineinfile:

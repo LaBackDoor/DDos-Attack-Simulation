@@ -1,37 +1,23 @@
 # tasks/role_assignment.yml
-# tasks/role_assignment.yml
 ---
 - name: "Get host information for grouping"
   set_fact:
     all_hosts: "{{ groups['subnet_a'] }}"
     cycle_timestamp: "{{ '%Y%m%d_%H%M%S' | strftime }}"
-    total_hosts: "{{ groups['subnet_a'] | length }}"
+    total_hosts: "{{ groups['subnet_a'] | length | int }}"
 
-- name: "Calculate attacker percentages"
+- name: "Calculate attacker percentages and counts"
   set_fact:
-    high_min_percent: 0.65
-    high_max_percent: 0.85
-    mid_min_percent: 0.35
-    mid_max_percent: 0.65
-    low_min_percent: 0.05
-    low_max_percent: 0.35
+    min_attackers: "{% if intensity == 'high' %}{{ (total_hosts|float * 0.65)|round|int }}{% elif intensity == 'mid' %}{{ (total_hosts|float * 0.35)|round|int }}{% elif intensity == 'low' %}{{ (total_hosts|float * 0.05)|round|int }}{% else %}0{% endif %}"
+    max_attackers: "{% if intensity == 'high' %}{{ (total_hosts|float * 0.85)|round|int }}{% elif intensity == 'mid' %}{{ (total_hosts|float * 0.65)|round|int }}{% elif intensity == 'low' %}{{ (total_hosts|float * 0.35)|round|int }}{% else %}0{% endif %}"
 
-- name: "Calculate dynamic attacker count"
+- name: "Set final attacker count"
   set_fact:
-    attacker_count: >-
-      {% if intensity == 'high' %}
-      {{ ((total_hosts * high_min_percent) | round | int) + (((total_hosts * high_max_percent) - (total_hosts * high_min_percent)) | round | int | random) }}
-      {% elif intensity == 'mid' %}
-      {{ ((total_hosts * mid_min_percent) | round | int) + (((total_hosts * mid_max_percent) - (total_hosts * mid_min_percent)) | round | int | random) }}
-      {% elif intensity == 'low' %}
-      {{ ((total_hosts * low_min_percent) | round | int) + (((total_hosts * low_max_percent) - (total_hosts * low_min_percent)) | round | int | random) }}
-      {% else %}
-      0
-      {% endif %}
+    attacker_count: "{{ min_attackers|int + range(max_attackers|int - min_attackers|int)|random }}"
 
 - name: "Calculate normal count"
   set_fact:
-    normal_count: "{{ total_hosts - attacker_count|int }}"
+    normal_count: "{{ total_hosts|int - attacker_count|int }}"
 
 - name: "Shuffle and assign roles"
   set_fact:
@@ -49,7 +35,7 @@
       Attack Cycle Start - {{ cycle_timestamp }}
       =====================================
       Intensity Level: {{ intensity }}
-      Total Machines: {{ all_hosts|length }}
+      Total Machines: {{ total_hosts }}
       Number of Attackers: {{ attacker_count }}
       Number of Normal Hosts: {{ normal_count }}
 
