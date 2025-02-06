@@ -47,7 +47,7 @@
 - name: "Start tcpdump on each web server"
   shell: |
     nohup {{ tcpdump_path.stdout }} -i any -s 0 -n -B 4096 \
-    'tcp and (port 80 or port 443) and (tcp[tcpflags] & (tcp-syn|tcp-ack|tcp-push|tcp-rst) != 0) and not host 10.0.1.4' \
+    'tcp and port 80 and host 10.0.1.1 and src net 10.0.1.160/28' \
     -w '/var/log/pcap/{{ pcap_filename }}' \
     -v 2>/var/log/pcap/tcpdump_error.log &
     echo $! > /var/log/pcap/tcpdump.pid
