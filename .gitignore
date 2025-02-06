@@ -13,6 +13,7 @@ Orchestration/Ansible/Attack/group_vars/all/vault.yml
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl
+Orchestration/Terraform/terraform.tfvars
 
 # Crash log files
 crash.log
