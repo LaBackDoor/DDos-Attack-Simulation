@@ -1,3 +1,4 @@
+# IDE
 /.idea/
 Orchestration/Ansible/Attack/group_vars/all/vault.yml
 
