@@ -12,8 +12,12 @@
       {{ 1200 + (2400 - 1200 + 1) | random }}
       {% elif intensity == 'mid' %}
       {{ 2400 + (3600 - 2400 + 1) | random }}
-      {% else %}
+      {% elif intensity == 'low' %}
       {{ 3600 + (4800 - 3600 + 1) | random }}
+      {% elif intensity == 'none' %}
+      {{ 2400 + (3600 - 2400 + 1) | random }}
+      {% else %}
+      {{ 3600 }}
       {% endif %}
   when: should_continue
 

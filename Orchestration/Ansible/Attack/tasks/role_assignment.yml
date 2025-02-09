@@ -13,8 +13,13 @@
 
 - name: "Set final attacker count"
   set_fact:
-    attacker_count: "{{ min_attackers|int + range(max_attackers|int - min_attackers|int)|random }}"
-
+    attacker_count: >-
+      {% if intensity == 'none' %}
+      0
+      {% else %}
+      {{ min_attackers|int + range(max_attackers|int - min_attackers|int)|random }}
+      {% endif %}
+      
 - name: "Calculate normal count"
   set_fact:
     normal_count: "{{ total_hosts|int - attacker_count|int }}"

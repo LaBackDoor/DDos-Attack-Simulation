@@ -9,8 +9,10 @@
       {{ 30 + (60 - 30 + 1) | random }}
       {% elif intensity == 'low' %}
       {{ 15 + (30 - 15 + 1) | random }}
+      {% elif intensity == 'none' %}
+      {{ 60 + (90 - 60 + 1) | random }}
       {% else %}
-      0
+      60
       {% endif %}
 
 
